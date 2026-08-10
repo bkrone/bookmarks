@@ -14,6 +14,7 @@
     --text-dim: #8a9490;
     --accent: #ff7a30;
     --accent-dim: #7a3d1c;
+    --danger: #e5484d;
     --mono: 'SF Mono', 'JetBrains Mono', 'Consolas', monospace;
     --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   }
@@ -77,9 +78,14 @@
     color: var(--text);
     letter-spacing: 0.03em;
   }
-  .search-row{
-    margin-bottom: 28px;
+  .toolbar{
+    display:flex;
+    align-items:center;
+    gap: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
   }
+  .search-row{ flex: 1 1 320px; }
   #search{
     width: 100%;
     background: var(--panel);
@@ -94,11 +100,38 @@
   }
   #search::placeholder{ color: var(--text-dim); }
   #search:focus{ border-color: var(--accent); }
+  .btn{
+    font-family: var(--mono);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-dim);
+    background: var(--panel);
+    border: 1px solid var(--line);
+    padding: 12px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.12s ease;
+  }
+  .btn:hover{ color: var(--text); border-color: #3a4441; }
+  .btn.primary{
+    color: var(--bg);
+    background: var(--accent);
+    border-color: var(--accent);
+    font-weight: 600;
+  }
+  .btn.primary:hover{ opacity: 0.9; }
+  .btn.on{
+    color: var(--bg);
+    background: var(--accent);
+    border-color: var(--accent);
+  }
   .chips{
     display:flex;
     flex-wrap: wrap;
     gap: 8px;
-    margin-top: 14px;
+    margin-bottom: 28px;
   }
   .chip{
     font-family: var(--mono);
@@ -145,6 +178,15 @@
     grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
     gap: 10px;
   }
+  .card-wrap{
+    position: relative;
+    min-width:0;
+  }
+  .card-wrap.drag-over{
+    outline: 1px dashed var(--accent);
+    outline-offset: 3px;
+    border-radius: 8px;
+  }
   a.card{
     display:flex;
     align-items:center;
@@ -175,6 +217,48 @@
     overflow: hidden;
     text-overflow: ellipsis;
   }
+  .editing a.card{
+    cursor: grab;
+    padding-right: 34px;
+    border-style: dashed;
+  }
+  .editing a.card:active{ cursor: grabbing; }
+  .remove-btn{
+    display:none;
+    position:absolute;
+    top: 6px;
+    right: 6px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--danger);
+    color: #fff;
+    border: none;
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1;
+    cursor: pointer;
+    align-items:center;
+    justify-content:center;
+  }
+  .editing .remove-btn{ display: flex; }
+  .add-card{
+    display:none;
+    align-items:center;
+    justify-content:center;
+    gap: 6px;
+    background: transparent;
+    border: 1px dashed var(--line);
+    border-radius: 8px;
+    padding: 12px 14px;
+    color: var(--text-dim);
+    font-size: 13px;
+    font-family: var(--mono);
+    cursor: pointer;
+    transition: all 0.12s ease;
+  }
+  .editing .add-card{ display:flex; }
+  .add-card:hover{ color: var(--accent); border-color: var(--accent-dim); }
   .empty{
     color: var(--text-dim);
     font-family: var(--mono);
@@ -202,6 +286,71 @@
     padding: 1px 6px;
     font-family: var(--mono);
   }
+  /* Modal */
+  .overlay{
+    display:none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    align-items:center;
+    justify-content:center;
+    z-index: 100;
+    padding: 20px;
+  }
+  .overlay.show{ display:flex; }
+  .modal{
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 24px;
+    width: 100%;
+    max-width: 400px;
+  }
+  .modal h2{
+    font-family: var(--mono);
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--accent);
+    margin: 0 0 18px;
+  }
+  .field{ margin-bottom: 14px; }
+  .field label{
+    display:block;
+    font-family: var(--mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+  }
+  .field input, .field select{
+    width: 100%;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    color: var(--text);
+    font-size: 14px;
+    padding: 10px 12px;
+    border-radius: 6px;
+    font-family: var(--sans);
+    outline: none;
+  }
+  .field input:focus, .field select:focus{ border-color: var(--accent); }
+  .modal-actions{
+    display:flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+  }
+  .hint{
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: -8px;
+    margin-bottom: 16px;
+    line-height:1.5;
+  }
+  #importFile{ display:none; }
   @media (max-width: 600px){
     h1{ font-size: 17px; }
     .clock{ display:none; }
@@ -221,10 +370,19 @@
     </div>
   </header>
 
-  <div class="search-row">
-    <input id="search" type="text" placeholder="Search bookmarks…  (press / to focus)" autocomplete="off">
-    <div class="chips" id="chips"></div>
+  <div class="toolbar">
+    <div class="search-row">
+      <input id="search" type="text" placeholder="Search bookmarks…  (press / to focus)" autocomplete="off">
+    </div>
+    <button class="btn" id="editToggle">Edit</button>
+    <button class="btn" id="addBtn">+ Add</button>
+    <button class="btn" id="exportBtn">Export</button>
+    <button class="btn" id="importBtn">Import</button>
+    <input type="file" id="importFile" accept="application/json">
+    <button class="btn" id="resetBtn">Reset</button>
   </div>
+
+  <div class="chips" id="chips"></div>
 
   <div id="results"></div>
   <div class="empty" id="empty">No matches.</div>
@@ -235,8 +393,34 @@
   </footer>
 </div>
 
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <h2>Add bookmark</h2>
+    <div class="field">
+      <label for="f-title">Title</label>
+      <input id="f-title" type="text" placeholder="e.g. Watch Duty">
+    </div>
+    <div class="field">
+      <label for="f-url">URL</label>
+      <input id="f-url" type="text" placeholder="https://example.com">
+    </div>
+    <div class="field">
+      <label for="f-cat">Category</label>
+      <select id="f-cat"></select>
+    </div>
+    <div class="field" id="f-newcat-wrap" style="display:none;">
+      <label for="f-newcat">New category name</label>
+      <input id="f-newcat" type="text" placeholder="e.g. Reference">
+    </div>
+    <div class="modal-actions">
+      <button class="btn" id="cancelAdd">Cancel</button>
+      <button class="btn primary" id="confirmAdd">Add</button>
+    </div>
+  </div>
+</div>
+
 <script>
-const DATA = [
+const DEFAULT_DATA = [
   {
     "category": "Morongo & Fire Dept Systems",
     "links": [
@@ -570,14 +754,31 @@ const DATA = [
     ]
   }
 ];
+const STORAGE_KEY = 'startpage_bookmarks_v1';
+
+let DATA = loadData();
+let activeCategory = null;
+let editing = false;
+let dragSrc = null; // { cat, index }
+
+function loadData(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  }catch(e){}
+  return structuredClone(DEFAULT_DATA);
+}
+
+function saveData(){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(DATA));
+}
 
 const resultsEl = document.getElementById('results');
 const chipsEl = document.getElementById('chips');
 const searchEl = document.getElementById('search');
 const emptyEl = document.getElementById('empty');
 const countEl = document.getElementById('count');
-
-let activeCategory = null;
+const wrapEl = document.querySelector('.wrap');
 
 function favicon(url){
   try{
@@ -608,6 +809,7 @@ function buildChips(){
     chip.onclick = () => { activeCategory = cat.category; render(); updateChips(); };
     chipsEl.appendChild(chip);
   });
+  updateChips();
 }
 
 function updateChips(){
@@ -617,17 +819,44 @@ function updateChips(){
   });
 }
 
+function findCat(name){
+  return DATA.find(c => c.category === name);
+}
+
+function removeLink(catName, index){
+  const cat = findCat(catName);
+  if (!cat) return;
+  const link = cat.links[index];
+  if (!confirm(`Remove "${link.title}"?`)) return;
+  cat.links.splice(index, 1);
+  saveData();
+  render();
+}
+
+function moveLink(srcCat, srcIdx, destCat, destIdx){
+  const from = findCat(srcCat);
+  const to = findCat(destCat);
+  if (!from || !to) return;
+  const [item] = from.links.splice(srcIdx, 1);
+  to.links.splice(destIdx, 0, item);
+  saveData();
+  render();
+}
+
 function render(){
   const q = searchEl.value.trim().toLowerCase();
   resultsEl.innerHTML = '';
   let shown = 0;
 
+  wrapEl.classList.toggle('editing', editing);
+
   DATA.forEach(cat => {
     if (activeCategory && cat.category !== activeCategory) return;
-    const matches = cat.links.filter(l =>
-      !q || l.title.toLowerCase().includes(q) || l.url.toLowerCase().includes(q)
-    );
-    if (matches.length === 0) return;
+    const matches = cat.links
+      .map((l, i) => ({...l, _i: i}))
+      .filter(l => !q || l.title.toLowerCase().includes(q) || l.url.toLowerCase().includes(q));
+
+    if (matches.length === 0 && !(editing && !q)) return;
 
     const catDiv = document.createElement('div');
     catDiv.className = 'cat';
@@ -638,12 +867,20 @@ function render(){
 
     const grid = document.createElement('div');
     grid.className = 'grid';
+    grid.dataset.cat = cat.category;
+
     matches.forEach(l => {
+      const cardWrap = document.createElement('div');
+      cardWrap.className = 'card-wrap';
+      cardWrap.dataset.cat = cat.category;
+      cardWrap.dataset.index = l._i;
+
       const a = document.createElement('a');
       a.className = 'card';
       a.href = l.url;
       a.target = '_blank';
       a.rel = 'noopener';
+      a.draggable = editing;
       const img = document.createElement('img');
       img.src = favicon(l.url);
       img.alt = '';
@@ -652,14 +889,68 @@ function render(){
       span.textContent = l.title;
       a.appendChild(img);
       a.appendChild(span);
-      grid.appendChild(a);
+
+      const rm = document.createElement('button');
+      rm.className = 'remove-btn';
+      rm.textContent = '×';
+      rm.title = 'Remove';
+      rm.onclick = (e) => { e.preventDefault(); e.stopPropagation(); removeLink(cat.category, l._i); };
+
+      cardWrap.appendChild(a);
+      cardWrap.appendChild(rm);
+
+      // drag handlers
+      a.addEventListener('dragstart', (e) => {
+        if (!editing) return;
+        dragSrc = { cat: cat.category, index: l._i };
+        e.dataTransfer.effectAllowed = 'move';
+      });
+      cardWrap.addEventListener('dragover', (e) => {
+        if (!editing || !dragSrc) return;
+        e.preventDefault();
+        cardWrap.classList.add('drag-over');
+      });
+      cardWrap.addEventListener('dragleave', () => cardWrap.classList.remove('drag-over'));
+      cardWrap.addEventListener('drop', (e) => {
+        if (!editing || !dragSrc) return;
+        e.preventDefault();
+        cardWrap.classList.remove('drag-over');
+        const destCat = cat.category;
+        let destIdx = l._i;
+        if (dragSrc.cat === destCat && dragSrc.index < destIdx) destIdx -= 1;
+        moveLink(dragSrc.cat, dragSrc.index, destCat, destIdx);
+        dragSrc = null;
+      });
+
+      grid.appendChild(cardWrap);
       shown++;
     });
+
+    // drop at end of grid (append)
+    grid.addEventListener('dragover', (e) => {
+      if (!editing || !dragSrc) return;
+      if (e.target === grid) e.preventDefault();
+    });
+    grid.addEventListener('drop', (e) => {
+      if (!editing || !dragSrc || e.target !== grid) return;
+      e.preventDefault();
+      moveLink(dragSrc.cat, dragSrc.index, cat.category, cat.links.length);
+      dragSrc = null;
+    });
+
+    if (editing && !q) {
+      const addCard = document.createElement('div');
+      addCard.className = 'add-card';
+      addCard.textContent = '+ add here';
+      addCard.onclick = () => openAddModal(cat.category);
+      grid.appendChild(addCard);
+    }
+
     catDiv.appendChild(grid);
     resultsEl.appendChild(catDiv);
   });
 
-  emptyEl.style.display = shown === 0 ? 'block' : 'none';
+  emptyEl.style.display = shown === 0 && !editing ? 'block' : 'none';
   countEl.textContent = q || activeCategory
     ? `${shown} of ${totalCount()} links`
     : `${totalCount()} links · ${DATA.length} categories`;
@@ -677,9 +968,8 @@ document.addEventListener('keydown', e => {
     if (firstCard) window.open(firstCard.href, '_blank');
   }
   if (e.key === 'Escape'){
-    searchEl.value = '';
-    render();
-    searchEl.blur();
+    if (overlay.classList.contains('show')) closeAddModal();
+    else { searchEl.value = ''; render(); searchEl.blur(); }
   }
 });
 
@@ -690,6 +980,122 @@ function tick(){
 }
 tick();
 setInterval(tick, 1000 * 30);
+
+// Edit toggle
+const editToggle = document.getElementById('editToggle');
+editToggle.addEventListener('click', () => {
+  editing = !editing;
+  editToggle.classList.toggle('on', editing);
+  editToggle.textContent = editing ? 'Done' : 'Edit';
+  render();
+});
+
+// Add modal
+const overlay = document.getElementById('overlay');
+const fTitle = document.getElementById('f-title');
+const fUrl = document.getElementById('f-url');
+const fCat = document.getElementById('f-cat');
+const fNewCatWrap = document.getElementById('f-newcat-wrap');
+const fNewCat = document.getElementById('f-newcat');
+
+function openAddModal(presetCat){
+  fTitle.value = '';
+  fUrl.value = '';
+  fNewCat.value = '';
+  fNewCatWrap.style.display = 'none';
+  fCat.innerHTML = '';
+  DATA.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c.category;
+    opt.textContent = c.category;
+    fCat.appendChild(opt);
+  });
+  const newOpt = document.createElement('option');
+  newOpt.value = '__new__';
+  newOpt.textContent = '+ New category…';
+  fCat.appendChild(newOpt);
+  if (presetCat) fCat.value = presetCat;
+  overlay.classList.add('show');
+  fTitle.focus();
+}
+
+function closeAddModal(){
+  overlay.classList.remove('show');
+}
+
+document.getElementById('addBtn').addEventListener('click', () => openAddModal());
+document.getElementById('cancelAdd').addEventListener('click', closeAddModal);
+overlay.addEventListener('click', (e) => { if (e.target === overlay) closeAddModal(); });
+
+fCat.addEventListener('change', () => {
+  fNewCatWrap.style.display = fCat.value === '__new__' ? 'block' : 'none';
+  if (fCat.value === '__new__') fNewCat.focus();
+});
+
+document.getElementById('confirmAdd').addEventListener('click', () => {
+  const title = fTitle.value.trim();
+  let url = fUrl.value.trim();
+  if (!title || !url){ alert('Title and URL are required.'); return; }
+  if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+  let catName = fCat.value;
+  if (catName === '__new__'){
+    catName = fNewCat.value.trim();
+    if (!catName){ alert('Enter a category name.'); return; }
+  }
+  let cat = findCat(catName);
+  if (!cat){
+    cat = { category: catName, links: [] };
+    DATA.push(cat);
+  }
+  cat.links.push({ title, url });
+  saveData();
+  editing = true;
+  editToggle.classList.add('on');
+  editToggle.textContent = 'Done';
+  closeAddModal();
+  buildChips();
+  render();
+});
+
+// Export / Import
+document.getElementById('exportBtn').addEventListener('click', () => {
+  const blob = new Blob([JSON.stringify(DATA, null, 2)], {type: 'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'bookmarks-export.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
+
+const importFile = document.getElementById('importFile');
+document.getElementById('importBtn').addEventListener('click', () => importFile.click());
+importFile.addEventListener('change', () => {
+  const file = importFile.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try{
+      const parsed = JSON.parse(reader.result);
+      if (!Array.isArray(parsed)) throw new Error('bad format');
+      DATA = parsed;
+      saveData();
+      buildChips();
+      render();
+    }catch(e){
+      alert('That file doesn\'t look like a valid bookmarks export.');
+    }
+    importFile.value = '';
+  };
+  reader.readAsText(file);
+});
+
+document.getElementById('resetBtn').addEventListener('click', () => {
+  if (!confirm('Reset to the original bookmark set? This clears any adds, removes, or reordering you\'ve made in this browser.')) return;
+  DATA = structuredClone(DEFAULT_DATA);
+  saveData();
+  buildChips();
+  render();
+});
 
 buildChips();
 render();
