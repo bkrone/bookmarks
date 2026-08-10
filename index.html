@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Start</title>
+<style>
+  :root{
+    --bg: #0b0e0d;
+    --panel: #121615;
+    --panel-2: #171c1b;
+    --line: #232b29;
+    --text: #e8ece9;
+    --text-dim: #8a9490;
+    --accent: #ff7a30;
+    --accent-dim: #7a3d1c;
+    --mono: 'SF Mono', 'JetBrains Mono', 'Consolas', monospace;
+    --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+  *{ box-sizing: border-box; }
+  html,body{
+    margin:0; padding:0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height:100vh;
+  }
+  body{
+    background-image:
+      radial-gradient(circle at 15% 0%, rgba(255,122,48,0.06), transparent 40%),
+      radial-gradient(circle at 85% 100%, rgba(255,122,48,0.04), transparent 40%);
+  }
+  .wrap{
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 48px 24px 80px;
+  }
+  header{
+    display:flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 32px;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 24px;
+  }
+  .brand{
+    display:flex;
+    align-items:baseline;
+    gap: 10px;
+  }
+  .brand .dot{
+    width:10px; height:10px;
+    border-radius:50%;
+    background: var(--accent);
+    box-shadow: 0 0 12px var(--accent);
+    display:inline-block;
+    transform: translateY(-1px);
+  }
+  h1{
+    font-size: 22px;
+    letter-spacing: 0.04em;
+    font-weight: 600;
+    margin:0;
+    font-family: var(--mono);
+    text-transform: uppercase;
+  }
+  .clock{
+    font-family: var(--mono);
+    color: var(--text-dim);
+    font-size: 13px;
+    text-align: right;
+  }
+  .clock .time{
+    font-size: 20px;
+    color: var(--text);
+    letter-spacing: 0.03em;
+  }
+  .search-row{
+    margin-bottom: 28px;
+  }
+  #search{
+    width: 100%;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    color: var(--text);
+    font-size: 16px;
+    padding: 14px 16px;
+    border-radius: 8px;
+    font-family: var(--sans);
+    outline: none;
+    transition: border-color 0.15s ease;
+  }
+  #search::placeholder{ color: var(--text-dim); }
+  #search:focus{ border-color: var(--accent); }
+  .chips{
+    display:flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 14px;
+  }
+  .chip{
+    font-family: var(--mono);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-dim);
+    background: var(--panel);
+    border: 1px solid var(--line);
+    padding: 6px 12px;
+    border-radius: 999px;
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.12s ease;
+  }
+  .chip:hover{ color: var(--text); border-color: #3a4441; }
+  .chip.active{
+    color: var(--bg);
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+  .cat{
+    margin-bottom: 30px;
+  }
+  .cat-title{
+    font-family: var(--mono);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+    margin: 0 0 12px 2px;
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .cat-title::after{
+    content:"";
+    flex:1;
+    height:1px;
+    background: var(--line);
+  }
+  .grid{
+    display:grid;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: 10px;
+  }
+  a.card{
+    display:flex;
+    align-items:center;
+    gap: 10px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 12px 14px;
+    text-decoration:none;
+    color: var(--text);
+    font-size: 13.5px;
+    transition: border-color 0.12s ease, background 0.12s ease, transform 0.12s ease;
+    min-width:0;
+  }
+  a.card:hover{
+    border-color: var(--accent-dim);
+    background: var(--panel-2);
+    transform: translateY(-1px);
+  }
+  a.card img{
+    width:16px; height:16px;
+    flex-shrink:0;
+    border-radius:3px;
+    background: #1e2422;
+  }
+  a.card span{
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .empty{
+    color: var(--text-dim);
+    font-family: var(--mono);
+    font-size: 13px;
+    padding: 40px 0;
+    text-align:center;
+    display:none;
+  }
+  footer{
+    margin-top: 50px;
+    padding-top: 20px;
+    border-top: 1px solid var(--line);
+    color: var(--text-dim);
+    font-family: var(--mono);
+    font-size: 11.5px;
+    display:flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  kbd{
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-family: var(--mono);
+  }
+  @media (max-width: 600px){
+    h1{ font-size: 17px; }
+    .clock{ display:none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <span class="dot"></span>
+      <h1>Start</h1>
+    </div>
+    <div class="clock">
+      <div class="time" id="time">--:--</div>
+      <div id="date">-- --- ----</div>
+    </div>
+  </header>
+
+  <div class="search-row">
+    <input id="search" type="text" placeholder="Search bookmarks…  (press / to focus)" autocomplete="off">
+    <div class="chips" id="chips"></div>
+  </div>
+
+  <div id="results"></div>
+  <div class="empty" id="empty">No matches.</div>
+
+  <footer>
+    <span id="count"></span>
+    <span>Press <kbd>/</kbd> to search · Enter opens the top result</span>
+  </footer>
+</div>
+
+<script>
+const DATA = [
+  {
+    "category": "Morongo & Fire Dept Systems",
+    "links": [
+      {
+        "title": "iConnect (intranet)",
+        "url": "http://iconnect/"
+      },
+      {
+        "title": "iConnect",
+        "url": "https://morongo.info/"
+      },
+      {
+        "title": "Vector to UKG",
+        "url": "https://firetime.morongo.org/"
+      },
+      {
+        "title": "IQSweb Login",
+        "url": "http://fireiqs.morongo.org/IQS/Login.aspx"
+      },
+      {
+        "title": "IQSweb (old)",
+        "url": "http://fire14/iqs/login.aspx"
+      },
+      {
+        "title": "Track-It! Self Service",
+        "url": "http://workorders.morongo.org/TrackItWeb/SelfService/Application/Main"
+      },
+      {
+        "title": "Mimecast",
+        "url": "https://morongo.login-us.mimecast.com/apps/#/home"
+      },
+      {
+        "title": "Galls (Morongo Fire uniforms)",
+        "url": "https://morongofire.galls.com/cgi/CGBBLOGIN"
+      },
+      {
+        "title": "CAL FIRE INTEL SharePoint",
+        "url": "https://calfirecloud.sharepoint.com/sites/CALFIREintel?e=1%3A5545ab21c3c24ff2af814edab936a5e1"
+      }
+    ]
+  },
+  {
+    "category": "Incident & GIS Mapping",
+    "links": [
+      {
+        "title": "Watch Duty",
+        "url": "https://app.watchduty.org/"
+      },
+      {
+        "title": "ALERTCalifornia - Cameras",
+        "url": "https://cameras.alertcalifornia.org/?pos=37.2382_-119.0000_6"
+      },
+      {
+        "title": "ALERTCalifornia - Operations",
+        "url": "https://ops.alertcalifornia.org/"
+      },
+      {
+        "title": "CalTopo",
+        "url": "https://caltopo.com/about/"
+      },
+      {
+        "title": "CAL FIRE WFA - TA (Wildfire Analyst)",
+        "url": "https://calfire.wildfireanalyst.com/apps"
+      },
+      {
+        "title": "NIFC ArcGIS Maps",
+        "url": "https://nifc.maps.arcgis.com/home/index.html"
+      },
+      {
+        "title": "NIFC ArcGIS Incident Maps",
+        "url": "https://nifc.maps.arcgis.com/home/group.html?id=95039f28d39840c6a8e4364c983db99b#overview"
+      },
+      {
+        "title": "ArcGIS Hub Home (NIFC)",
+        "url": "https://nifc.hub.arcgis.com/"
+      },
+      {
+        "title": "IAA Portal",
+        "url": "https://experience.arcgis.com/experience/79fe419a51b74a8da8320410e212e14a"
+      },
+      {
+        "title": "2026 IAA Status Viewer App",
+        "url": "https://experience.arcgis.com/experience/666f2b5144bd461e9d2d1b6a47d02c0c"
+      },
+      {
+        "title": "Incident Awareness and Assessment",
+        "url": "https://iaa-nifc.hub.arcgis.com/"
+      },
+      {
+        "title": "NIFS Resources (NIFC Hub)",
+        "url": "https://nifc.hub.arcgis.com/pages/3795eae52a7d473f9e56db1c189b0adf"
+      },
+      {
+        "title": "NIFS Resources (WFIGS Hub)",
+        "url": "https://wfigs-nifc.hub.arcgis.com/pages/nifs-resources"
+      },
+      {
+        "title": "NIFC Maps",
+        "url": "https://www.nifc.gov/fire-information/maps"
+      },
+      {
+        "title": "NIFC FTP - Incident Specific Data",
+        "url": "https://ftp.wildfire.gov/public/incident_specific_data/"
+      },
+      {
+        "title": "Fuels/Fire Danger | NIFC",
+        "url": "https://www.nifc.gov/nicc/predictive-services/fuels-fire-danger"
+      },
+      {
+        "title": "Fuels-Fire-Behavior-Advisory (OSC PDF)",
+        "url": "https://www.nifc.gov/sites/default/files/NICC/2-Predictive%20Services/Fuels-Fire%20Danger/Fuels-Fire-Behavior-Advisory_OSC_20250804.pdf"
+      },
+      {
+        "title": "California Wildfire History Map",
+        "url": "https://projects.capradio.org/california-fire-history/#11.36/37.5828/-118.7508"
+      },
+      {
+        "title": "Data Basin - Fire History",
+        "url": "https://databasin.org/maps/new/#datasets=bf8db57ee6e0420c8ecce3c6395aceeb"
+      },
+      {
+        "title": "California State Geoportal",
+        "url": "https://gis.data.ca.gov/"
+      },
+      {
+        "title": "BIOS Viewer @ CDFW",
+        "url": "https://apps.wildlife.ca.gov/bios6/?tool=cnddbqv"
+      },
+      {
+        "title": "GIS Converter",
+        "url": "https://mygeodata.cloud/converter/"
+      },
+      {
+        "title": "MapOmeter",
+        "url": "https://us.mapometer.com/"
+      }
+    ]
+  },
+  {
+    "category": "Dispatch & Response Operations",
+    "links": [
+      {
+        "title": "CrewSense",
+        "url": "https://www.crewsense.com/Application/ControlPanel/"
+      },
+      {
+        "title": "NRCC Logistics / Dispatch Operations",
+        "url": "https://gacc.nifc.gov/nrcc/dispatch/dispatch.htm"
+      },
+      {
+        "title": "SoCal GACC",
+        "url": "https://gacc.nifc.gov/oscc/index.php"
+      },
+      {
+        "title": "NG-SCOUT",
+        "url": "https://portal.ngscout.org/"
+      },
+      {
+        "title": "Cal OES MARS",
+        "url": "https://engage.caloes.ca.gov/mars/s/"
+      },
+      {
+        "title": "IROC (Self Service)",
+        "url": "https://iroc.nwcg.gov/now/nav/ui/classic/params/target/home.do"
+      },
+      {
+        "title": "IROC Quick Reference & Training Videos",
+        "url": "https://www.wildfire.gov/page/iroc-quick-reference-cards-and-training-videos"
+      },
+      {
+        "title": "FAMAuth Portal",
+        "url": "https://famauth.wildfire.gov/"
+      },
+      {
+        "title": "FAMAuth Login",
+        "url": "https://iwfirp.nwcg.gov/"
+      },
+      {
+        "title": "FAMAuth Dashboard",
+        "url": "https://iwfirp.nwcg.gov/?PAGENAV=dashboard"
+      },
+      {
+        "title": "genasys Protect",
+        "url": "https://gem.genasys.com/idp/login_external"
+      },
+      {
+        "title": "Active911",
+        "url": "https://active911.com/"
+      },
+      {
+        "title": "NFIRS Login",
+        "url": "https://nfirs.fema.gov/NFIRSWeb/login"
+      },
+      {
+        "title": "RivCo EMD (REMSA)",
+        "url": "https://rivcoready.org/remsa"
+      },
+      {
+        "title": "Shift Tickets Portal",
+        "url": "https://shifttickets.fire.ca.gov/"
+      },
+      {
+        "title": "ImageTrend (Riverside County)",
+        "url": "https://riversidecounty.imagetrendelite.com/elite/organizationriversidecounty/"
+      }
+    ]
+  },
+  {
+    "category": "Weather & Aviation",
+    "links": [
+      {
+        "title": "Spot Forecast Monitor",
+        "url": "https://spot.weather.gov/"
+      },
+      {
+        "title": "FAA - Graphic TFRs",
+        "url": "https://tfr.faa.gov/tfr3/?page=tfr"
+      },
+      {
+        "title": "Wildfire Forecast & Threat Intelligence Integration Center",
+        "url": "https://hub.wftiic.ca.gov/"
+      }
+    ]
+  },
+  {
+    "category": "Training & Certification",
+    "links": [
+      {
+        "title": "Target Solutions",
+        "url": "https://app.targetsolutions.com/tsapp/dashboard/pl_fb/index.cfm?fuseaction=c_pro.showHome"
+      },
+      {
+        "title": "LACoFD Training",
+        "url": "https://training.fire.lacounty.gov/latest-events/"
+      },
+      {
+        "title": "TEEX",
+        "url": "https://my.teex.org/TeexPortal/Default.aspx"
+      },
+      {
+        "title": "Brainier (Riverside County)",
+        "url": "https://riversidecounty.brainier.com/#/dashboard"
+      },
+      {
+        "title": "Rigging Lab Academy",
+        "url": "https://learning.rigginglabacademy.com/users/sign_in"
+      },
+      {
+        "title": "NIMS IAP",
+        "url": "https://www.nimsiap.org/"
+      },
+      {
+        "title": "Firescope Publications",
+        "url": "https://firescope.caloes.ca.gov/publications"
+      }
+    ]
+  },
+  {
+    "category": "Admin, HR & Benefits",
+    "links": [
+      {
+        "title": "Access Online",
+        "url": "https://www.access-online.com/cpsApp1/AxolComServlet2?requestCmdId=login"
+      },
+      {
+        "title": "Raisin - Admin Login",
+        "url": "https://admin.akaraisin.com/Login.aspx"
+      },
+      {
+        "title": "Benefit Coordinators Corporation",
+        "url": "https://benefitcc.wealthcareportal.com/Page/Home"
+      },
+      {
+        "title": "Primary.Health",
+        "url": "https://primary.health/"
+      },
+      {
+        "title": "Power Apps",
+        "url": "https://make.powerapps.com/environments/c014feb1-19cc-e419-b054-82206fe1810d/home?offer=dev&ScenarioId=Signup"
+      }
+    ]
+  },
+  {
+    "category": "Events",
+    "links": [
+      {
+        "title": "9/11 Memorial Stair Climb - Registration",
+        "url": "https://nfff.akaraisin.com/ui/morongo"
+      }
+    ]
+  },
+  {
+    "category": "Productivity & Tools",
+    "links": [
+      {
+        "title": "Google Drive",
+        "url": "https://drive.google.com/drive/home"
+      },
+      {
+        "title": "2026 MRF VAC Matrix (Sheet)",
+        "url": "https://docs.google.com/spreadsheets/d/1zCrlJ5F24LVW8QzXCgXIZgbKWRnbLwjajPA73wQ0x_o/edit?gid=0#gid=0"
+      },
+      {
+        "title": "SITL Student Folder (QR Code)",
+        "url": "https://drive.google.com/drive/folders/1eGjO3XOH73AoLjwbnr9bFPKFIJ6d_LhN"
+      },
+      {
+        "title": "Google Photos",
+        "url": "https://photos.google.com/photo/AF1QipM_Ao3ehaUNF5oy7zrTbw_ydt3upyPVPLvLoH_f"
+      },
+      {
+        "title": "ChatGPT",
+        "url": "https://chatgpt.com/"
+      },
+      {
+        "title": "Grok",
+        "url": "https://grok.com/"
+      },
+      {
+        "title": "Inkscape Keyboard Shortcuts",
+        "url": "https://inkscape.org/doc/keys-1.3.x.html#idm3423"
+      },
+      {
+        "title": "Randall's Adventure (Downloads)",
+        "url": "https://randallsadventure.com/downloads"
+      },
+      {
+        "title": "Rescue Response Gear",
+        "url": "https://rescueresponse.com/?__s=zrn69z2iqi5qui1mdlih&login=success"
+      }
+    ]
+  }
+];
+
+const resultsEl = document.getElementById('results');
+const chipsEl = document.getElementById('chips');
+const searchEl = document.getElementById('search');
+const emptyEl = document.getElementById('empty');
+const countEl = document.getElementById('count');
+
+let activeCategory = null;
+
+function favicon(url){
+  try{
+    const u = new URL(url);
+    return `https://www.google.com/s2/favicons?sz=64&domain=${u.hostname}`;
+  }catch(e){
+    return '';
+  }
+}
+
+function totalCount(){
+  return DATA.reduce((n,c)=>n+c.links.length,0);
+}
+
+function buildChips(){
+  chipsEl.innerHTML = '';
+  const allChip = document.createElement('div');
+  allChip.className = 'chip active';
+  allChip.textContent = 'All';
+  allChip.onclick = () => { activeCategory = null; render(); updateChips(); };
+  chipsEl.appendChild(allChip);
+
+  DATA.forEach(cat => {
+    const chip = document.createElement('div');
+    chip.className = 'chip';
+    chip.textContent = cat.category;
+    chip.dataset.cat = cat.category;
+    chip.onclick = () => { activeCategory = cat.category; render(); updateChips(); };
+    chipsEl.appendChild(chip);
+  });
+}
+
+function updateChips(){
+  [...chipsEl.children].forEach(c => {
+    const isAll = c.textContent === 'All';
+    c.classList.toggle('active', activeCategory === null ? isAll : c.dataset.cat === activeCategory);
+  });
+}
+
+function render(){
+  const q = searchEl.value.trim().toLowerCase();
+  resultsEl.innerHTML = '';
+  let shown = 0;
+
+  DATA.forEach(cat => {
+    if (activeCategory && cat.category !== activeCategory) return;
+    const matches = cat.links.filter(l =>
+      !q || l.title.toLowerCase().includes(q) || l.url.toLowerCase().includes(q)
+    );
+    if (matches.length === 0) return;
+
+    const catDiv = document.createElement('div');
+    catDiv.className = 'cat';
+    const titleDiv = document.createElement('div');
+    titleDiv.className = 'cat-title';
+    titleDiv.textContent = cat.category;
+    catDiv.appendChild(titleDiv);
+
+    const grid = document.createElement('div');
+    grid.className = 'grid';
+    matches.forEach(l => {
+      const a = document.createElement('a');
+      a.className = 'card';
+      a.href = l.url;
+      a.target = '_blank';
+      a.rel = 'noopener';
+      const img = document.createElement('img');
+      img.src = favicon(l.url);
+      img.alt = '';
+      img.loading = 'lazy';
+      const span = document.createElement('span');
+      span.textContent = l.title;
+      a.appendChild(img);
+      a.appendChild(span);
+      grid.appendChild(a);
+      shown++;
+    });
+    catDiv.appendChild(grid);
+    resultsEl.appendChild(catDiv);
+  });
+
+  emptyEl.style.display = shown === 0 ? 'block' : 'none';
+  countEl.textContent = q || activeCategory
+    ? `${shown} of ${totalCount()} links`
+    : `${totalCount()} links · ${DATA.length} categories`;
+}
+
+searchEl.addEventListener('input', render);
+
+document.addEventListener('keydown', e => {
+  if (e.key === '/' && document.activeElement !== searchEl){
+    e.preventDefault();
+    searchEl.focus();
+  }
+  if (e.key === 'Enter' && document.activeElement === searchEl){
+    const firstCard = resultsEl.querySelector('a.card');
+    if (firstCard) window.open(firstCard.href, '_blank');
+  }
+  if (e.key === 'Escape'){
+    searchEl.value = '';
+    render();
+    searchEl.blur();
+  }
+});
+
+function tick(){
+  const now = new Date();
+  document.getElementById('time').textContent = now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+  document.getElementById('date').textContent = now.toLocaleDateString([], {weekday:'short', month:'short', day:'numeric', year:'numeric'});
+}
+tick();
+setInterval(tick, 1000 * 30);
+
+buildChips();
+render();
+</script>
+</body>
+</html>
