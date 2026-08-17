@@ -15,6 +15,7 @@
     --accent: #ff7a30;
     --accent-dim: #7a3d1c;
     --danger: #e5484d;
+    --ok: #4ade80;
     --mono: 'SF Mono', 'JetBrains Mono', 'Consolas', monospace;
     --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   }
@@ -42,7 +43,7 @@
     align-items: flex-end;
     flex-wrap: wrap;
     gap: 16px;
-    margin-bottom: 32px;
+    margin-bottom: 20px;
     border-bottom: 1px solid var(--line);
     padding-bottom: 24px;
   }
@@ -78,6 +79,28 @@
     color: var(--text);
     letter-spacing: 0.03em;
   }
+  .status-row{
+    display:flex;
+    justify-content: flex-end;
+    align-items:center;
+    gap: 8px;
+    margin-bottom: 20px;
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: var(--text-dim);
+  }
+  .status-dot{
+    width: 7px; height:7px;
+    border-radius:50%;
+    background: var(--text-dim);
+    display:inline-block;
+  }
+  .status-dot.ok{ background: var(--ok); box-shadow: 0 0 6px var(--ok); }
+  .status-dot.syncing{ background: var(--accent); box-shadow: 0 0 6px var(--accent); animation: pulse 1s infinite ease-in-out; }
+  .status-dot.err{ background: var(--danger); box-shadow: 0 0 6px var(--danger); }
+  @keyframes pulse{ 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+  .status-row a{ color: var(--text-dim); text-decoration: underline; cursor: pointer; }
+  .status-row a:hover{ color: var(--accent); }
   .toolbar{
     display:flex;
     align-items:center;
@@ -267,6 +290,18 @@
     text-align:center;
     display:none;
   }
+  .banner{
+    display:none;
+    background: rgba(255,122,48,0.08);
+    border: 1px solid var(--accent-dim);
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin-bottom: 24px;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .banner.show{ display:block; }
+  .banner a{ color: var(--accent); cursor:pointer; text-decoration: underline; }
   footer{
     margin-top: 50px;
     padding-top: 20px;
@@ -350,6 +385,16 @@
     margin-bottom: 16px;
     line-height:1.5;
   }
+  .modal-err{
+    display:none;
+    color: var(--danger);
+    font-family: var(--mono);
+    font-size: 11.5px;
+    margin-top: -6px;
+    margin-bottom: 14px;
+    line-height: 1.5;
+  }
+  .modal-err.show{ display:block; }
   #importFile{ display:none; }
   @media (max-width: 600px){
     h1{ font-size: 17px; }
@@ -369,6 +414,17 @@
       <div id="date">-- --- ----</div>
     </div>
   </header>
+
+  <div class="status-row">
+    <span class="status-dot" id="statusDot"></span>
+    <span id="statusText">Not connected</span>
+    <span>·</span>
+    <a id="openSettings">Settings</a>
+  </div>
+
+  <div class="banner" id="setupBanner">
+    Not connected to a shared bin yet — changes will only save to this browser. Click <a id="bannerSettingsLink">Settings</a> to connect your JSONBin.
+  </div>
 
   <div class="toolbar">
     <div class="search-row">
@@ -415,6 +471,29 @@
     <div class="modal-actions">
       <button class="btn" id="cancelAdd">Cancel</button>
       <button class="btn primary" id="confirmAdd">Add</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="settingsOverlay">
+  <div class="modal">
+    <h2>Connect shared storage</h2>
+    <div class="hint">
+      Create a free bin at jsonbin.io seeded with your bookmarks JSON, then paste its Bin ID and your X-Access-Key below. Do this once per browser/device — after that, every device reads and writes the same bin.
+    </div>
+    <div class="field">
+      <label for="s-binid">Bin ID</label>
+      <input id="s-binid" type="text" placeholder="e.g. 65a1c2...">
+    </div>
+    <div class="field">
+      <label for="s-key">X-Access-Key</label>
+      <input id="s-key" type="text" placeholder="Paste your JSONBin access key">
+    </div>
+    <div class="modal-err" id="settingsErr"></div>
+    <div class="modal-actions">
+      <button class="btn" id="settingsDisconnect">Disconnect</button>
+      <button class="btn" id="cancelSettings">Cancel</button>
+      <button class="btn primary" id="confirmSettings">Save & Connect</button>
     </div>
   </div>
 </div>
@@ -754,23 +833,36 @@ const DEFAULT_DATA = [
     ]
   }
 ];
-const STORAGE_KEY = 'startpage_bookmarks_v1';
+const CACHE_KEY = 'startpage_cache_v1';
+const CFG_KEY = 'startpage_jsonbin_cfg_v1';
+const JSONBIN_BASE = 'https://api.jsonbin.io/v3/b/';
 
-let DATA = loadData();
+let DATA = loadCache() || structuredClone(DEFAULT_DATA);
+let cfg = loadCfg(); // { binId, key } or null
 let activeCategory = null;
 let editing = false;
-let dragSrc = null; // { cat, index }
+let dragSrc = null;
+let syncTimer = null;
 
-function loadData(){
+function loadCfg(){
   try{
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
-  }catch(e){}
-  return structuredClone(DEFAULT_DATA);
+    const raw = localStorage.getItem(CFG_KEY);
+    return raw ? JSON.parse(raw) : null;
+  }catch(e){ return null; }
 }
-
-function saveData(){
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(DATA));
+function saveCfg(c){
+  cfg = c;
+  if (c) localStorage.setItem(CFG_KEY, JSON.stringify(c));
+  else localStorage.removeItem(CFG_KEY);
+}
+function loadCache(){
+  try{
+    const raw = localStorage.getItem(CACHE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  }catch(e){ return null; }
+}
+function saveCache(){
+  localStorage.setItem(CACHE_KEY, JSON.stringify(DATA));
 }
 
 const resultsEl = document.getElementById('results');
@@ -779,6 +871,18 @@ const searchEl = document.getElementById('search');
 const emptyEl = document.getElementById('empty');
 const countEl = document.getElementById('count');
 const wrapEl = document.querySelector('.wrap');
+const statusDot = document.getElementById('statusDot');
+const statusText = document.getElementById('statusText');
+const setupBanner = document.getElementById('setupBanner');
+
+function setStatus(state, text){
+  statusDot.className = 'status-dot' + (state ? ' ' + state : '');
+  statusText.textContent = text;
+}
+
+function refreshBanner(){
+  setupBanner.classList.toggle('show', !cfg);
+}
 
 function favicon(url){
   try{
@@ -793,6 +897,67 @@ function totalCount(){
   return DATA.reduce((n,c)=>n+c.links.length,0);
 }
 
+// ---------- Remote sync ----------
+async function fetchRemote(){
+  if (!cfg) return null;
+  const res = await fetch(JSONBIN_BASE + cfg.binId + '/latest', {
+    headers: { 'X-Access-Key': cfg.key }
+  });
+  if (!res.ok) throw new Error('Fetch failed: ' + res.status);
+  const json = await res.json();
+  return json.record;
+}
+
+async function pushRemote(data){
+  if (!cfg) return;
+  const res = await fetch(JSONBIN_BASE + cfg.binId, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', 'X-Access-Key': cfg.key },
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) throw new Error('Push failed: ' + res.status);
+}
+
+async function initialLoad(){
+  refreshBanner();
+  if (!cfg){
+    setStatus('', 'Not connected — local only');
+    render();
+    return;
+  }
+  setStatus('syncing', 'Loading…');
+  try{
+    const remote = await fetchRemote();
+    if (Array.isArray(remote)){
+      DATA = remote;
+      saveCache();
+    }
+    setStatus('ok', 'Synced');
+    buildChips();
+    render();
+  }catch(e){
+    setStatus('err', 'Sync failed — showing cached copy');
+    buildChips();
+    render();
+  }
+}
+
+function queueSync(){
+  saveCache();
+  if (!cfg) { setStatus('', 'Not connected — local only'); return; }
+  setStatus('syncing', 'Saving…');
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(async () => {
+    try{
+      await pushRemote(DATA);
+      setStatus('ok', 'Synced');
+    }catch(e){
+      setStatus('err', 'Sync failed — will retry on next change');
+    }
+  }, 500);
+}
+
+// ---------- Rendering ----------
 function buildChips(){
   chipsEl.innerHTML = '';
   const allChip = document.createElement('div');
@@ -829,7 +994,7 @@ function removeLink(catName, index){
   const link = cat.links[index];
   if (!confirm(`Remove "${link.title}"?`)) return;
   cat.links.splice(index, 1);
-  saveData();
+  queueSync();
   render();
 }
 
@@ -839,7 +1004,7 @@ function moveLink(srcCat, srcIdx, destCat, destIdx){
   if (!from || !to) return;
   const [item] = from.links.splice(srcIdx, 1);
   to.links.splice(destIdx, 0, item);
-  saveData();
+  queueSync();
   render();
 }
 
@@ -899,7 +1064,6 @@ function render(){
       cardWrap.appendChild(a);
       cardWrap.appendChild(rm);
 
-      // drag handlers
       a.addEventListener('dragstart', (e) => {
         if (!editing) return;
         dragSrc = { cat: cat.category, index: l._i };
@@ -926,7 +1090,6 @@ function render(){
       shown++;
     });
 
-    // drop at end of grid (append)
     grid.addEventListener('dragover', (e) => {
       if (!editing || !dragSrc) return;
       if (e.target === grid) e.preventDefault();
@@ -969,6 +1132,7 @@ document.addEventListener('keydown', e => {
   }
   if (e.key === 'Escape'){
     if (overlay.classList.contains('show')) closeAddModal();
+    else if (settingsOverlay.classList.contains('show')) closeSettingsModal();
     else { searchEl.value = ''; render(); searchEl.blur(); }
   }
 });
@@ -1018,10 +1182,7 @@ function openAddModal(presetCat){
   overlay.classList.add('show');
   fTitle.focus();
 }
-
-function closeAddModal(){
-  overlay.classList.remove('show');
-}
+function closeAddModal(){ overlay.classList.remove('show'); }
 
 document.getElementById('addBtn').addEventListener('click', () => openAddModal());
 document.getElementById('cancelAdd').addEventListener('click', closeAddModal);
@@ -1048,13 +1209,79 @@ document.getElementById('confirmAdd').addEventListener('click', () => {
     DATA.push(cat);
   }
   cat.links.push({ title, url });
-  saveData();
+  queueSync();
   editing = true;
   editToggle.classList.add('on');
   editToggle.textContent = 'Done';
   closeAddModal();
   buildChips();
   render();
+});
+
+// Settings modal
+const settingsOverlay = document.getElementById('settingsOverlay');
+const sBinId = document.getElementById('s-binid');
+const sKey = document.getElementById('s-key');
+const settingsErr = document.getElementById('settingsErr');
+
+function openSettingsModal(){
+  settingsErr.classList.remove('show');
+  sBinId.value = cfg ? cfg.binId : '';
+  sKey.value = cfg ? cfg.key : '';
+  settingsOverlay.classList.add('show');
+  sBinId.focus();
+}
+function closeSettingsModal(){ settingsOverlay.classList.remove('show'); }
+
+document.getElementById('openSettings').addEventListener('click', openSettingsModal);
+document.getElementById('bannerSettingsLink').addEventListener('click', openSettingsModal);
+document.getElementById('cancelSettings').addEventListener('click', closeSettingsModal);
+settingsOverlay.addEventListener('click', (e) => { if (e.target === settingsOverlay) closeSettingsModal(); });
+
+document.getElementById('settingsDisconnect').addEventListener('click', () => {
+  saveCfg(null);
+  refreshBanner();
+  setStatus('', 'Not connected — local only');
+  closeSettingsModal();
+});
+
+document.getElementById('confirmSettings').addEventListener('click', async () => {
+  const binId = sBinId.value.trim();
+  const key = sKey.value.trim();
+  if (!binId || !key){
+    settingsErr.textContent = 'Both fields are required.';
+    settingsErr.classList.add('show');
+    return;
+  }
+  settingsErr.classList.remove('show');
+  setStatus('syncing', 'Connecting…');
+  const testCfg = { binId, key };
+  try{
+    const res = await fetch(JSONBIN_BASE + binId + '/latest', { headers: { 'X-Access-Key': key } });
+    if (!res.ok) throw new Error(res.status === 404 ? 'Bin not found — check the Bin ID.' : 'Access denied — check the Access Key.');
+    const json = await res.json();
+    if (Array.isArray(json.record)){
+      DATA = json.record;
+      saveCache();
+    } else {
+      // bin exists but empty/wrong shape — push our current data to seed it
+      await fetch(JSONBIN_BASE + binId, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'X-Access-Key': key },
+        body: JSON.stringify(DATA)
+      });
+    }
+    saveCfg(testCfg);
+    refreshBanner();
+    setStatus('ok', 'Synced');
+    buildChips();
+    render();
+    closeSettingsModal();
+  }catch(e){
+    settingsErr.textContent = e.message || 'Could not connect. Check your Bin ID and Access Key.';
+    settingsErr.classList.add('show');
+    setStatus('err', 'Not connected');
+  }
 });
 
 // Export / Import
@@ -1078,7 +1305,7 @@ importFile.addEventListener('change', () => {
       const parsed = JSON.parse(reader.result);
       if (!Array.isArray(parsed)) throw new Error('bad format');
       DATA = parsed;
-      saveData();
+      queueSync();
       buildChips();
       render();
     }catch(e){
@@ -1090,15 +1317,14 @@ importFile.addEventListener('change', () => {
 });
 
 document.getElementById('resetBtn').addEventListener('click', () => {
-  if (!confirm('Reset to the original bookmark set? This clears any adds, removes, or reordering you\'ve made in this browser.')) return;
+  if (!confirm('Reset to the original bookmark set? This overwrites your current list (and the synced copy, if connected).')) return;
   DATA = structuredClone(DEFAULT_DATA);
-  saveData();
+  queueSync();
   buildChips();
   render();
 });
 
-buildChips();
-render();
+initialLoad();
 </script>
 </body>
 </html>
