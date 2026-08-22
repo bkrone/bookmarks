@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BookmarKs</title>
+<title>Start</title>
 <style>
   :root{
     --bg: #0b0e0d;
@@ -290,6 +290,110 @@
     text-align:center;
     display:none;
   }
+  .launchers-row{
+    display:flex;
+    flex-wrap: wrap;
+    align-items:center;
+    gap: 8px;
+    margin-bottom: 24px;
+  }
+  .launchers-label{
+    font-family: var(--mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-dim);
+    margin-right: 4px;
+  }
+  .launcher-pill{
+    display:flex;
+    align-items:center;
+    gap: 8px;
+    background: var(--panel);
+    border: 1px solid var(--accent-dim);
+    border-radius: 999px;
+    padding: 7px 8px 7px 14px;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--text);
+    user-select: none;
+    transition: all 0.12s ease;
+  }
+  .launcher-pill:hover{ border-color: var(--accent); background: var(--panel-2); }
+  .launcher-pill .go{
+    color: var(--accent);
+    font-family: var(--mono);
+    font-size: 11px;
+  }
+  .launcher-pill .badge{
+    font-family: var(--mono);
+    font-size: 10.5px;
+    color: var(--text-dim);
+    background: var(--panel-2);
+    border-radius: 999px;
+    padding: 2px 7px;
+  }
+  .launcher-pill .icon-btn{
+    display:none;
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    border: none;
+    background: var(--panel-2);
+    color: var(--text-dim);
+    font-size: 11px;
+    align-items:center;
+    justify-content:center;
+    cursor: pointer;
+    line-height:1;
+  }
+  .launcher-pill .icon-btn:hover{ color: var(--text); }
+  .launcher-pill .icon-btn.del:hover{ color: var(--danger); }
+  .editing .launcher-pill .icon-btn{ display:flex; }
+  .new-launcher-btn{
+    font-family: var(--mono);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-dim);
+    background: transparent;
+    border: 1px dashed var(--line);
+    padding: 8px 14px;
+    border-radius: 999px;
+    cursor: pointer;
+  }
+  .new-launcher-btn:hover{ color: var(--accent); border-color: var(--accent-dim); }
+  .modal.wide{ max-width: 480px; }
+  .checklist{
+    max-height: 320px;
+    overflow-y: auto;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin-bottom: 16px;
+  }
+  .checklist-cat{
+    font-family: var(--mono);
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--accent);
+    margin: 12px 0 6px;
+  }
+  .checklist-cat:first-child{ margin-top: 0; }
+  .checklist-item{
+    display:flex;
+    align-items:center;
+    gap: 8px;
+    padding: 5px 0;
+    font-size: 13px;
+  }
+  .checklist-item input{ accent-color: var(--accent); }
+  .checklist-item label{
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    cursor:pointer;
+  }
   .banner{
     display:none;
     background: rgba(255,122,48,0.08);
@@ -407,7 +511,7 @@
   <header>
     <div class="brand">
       <span class="dot"></span>
-      <h1>BookmarKs</h1>
+      <h1>Start</h1>
     </div>
     <div class="clock">
       <div class="time" id="time">--:--</div>
@@ -439,6 +543,8 @@
   </div>
 
   <div class="chips" id="chips"></div>
+
+  <div class="launchers-row" id="launchersRow"></div>
 
   <div id="results"></div>
   <div class="empty" id="empty">No matches.</div>
@@ -494,6 +600,26 @@
       <button class="btn" id="settingsDisconnect">Disconnect</button>
       <button class="btn" id="cancelSettings">Cancel</button>
       <button class="btn primary" id="confirmSettings">Save & Connect</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="launcherOverlay">
+  <div class="modal wide">
+    <h2 id="launcherModalTitle">New launcher</h2>
+    <div class="field">
+      <label for="l-name">Name</label>
+      <input id="l-name" type="text" placeholder="e.g. Morning Check">
+    </div>
+    <div class="field">
+      <label>Bookmarks to open</label>
+    </div>
+    <div class="checklist" id="launcherChecklist"></div>
+    <div class="modal-err" id="launcherErr"></div>
+    <div class="modal-actions">
+      <button class="btn" id="launcherDelete" style="display:none;">Delete</button>
+      <button class="btn" id="cancelLauncher">Cancel</button>
+      <button class="btn primary" id="confirmLauncher">Save</button>
     </div>
   </div>
 </div>
@@ -837,12 +963,15 @@ const CACHE_KEY = 'startpage_cache_v1';
 const CFG_KEY = 'startpage_jsonbin_cfg_v1';
 const JSONBIN_BASE = 'https://api.jsonbin.io/v3/b/';
 
-let DATA = loadCache() || structuredClone(DEFAULT_DATA);
+const cached = loadCache();
+let DATA = cached ? cached.categories : structuredClone(DEFAULT_DATA);
+let LAUNCHERS = cached ? (cached.launchers || []) : [];
 let cfg = loadCfg(); // { binId, key } or null
 let activeCategory = null;
 let editing = false;
 let dragSrc = null;
 let syncTimer = null;
+let editingLauncherId = null;
 
 function loadCfg(){
   try{
@@ -862,7 +991,21 @@ function loadCache(){
   }catch(e){ return null; }
 }
 function saveCache(){
-  localStorage.setItem(CACHE_KEY, JSON.stringify(DATA));
+  localStorage.setItem(CACHE_KEY, JSON.stringify({ categories: DATA, launchers: LAUNCHERS }));
+}
+// Accepts either the legacy bare-array shape or the {categories, launchers} shape.
+function applyRemoteRecord(record){
+  if (Array.isArray(record)){
+    DATA = record;
+    LAUNCHERS = [];
+  } else if (record && Array.isArray(record.categories)){
+    DATA = record.categories;
+    LAUNCHERS = Array.isArray(record.launchers) ? record.launchers : [];
+  } else {
+    return false;
+  }
+  saveCache();
+  return true;
 }
 
 const resultsEl = document.getElementById('results');
@@ -908,12 +1051,12 @@ async function fetchRemote(){
   return json.record;
 }
 
-async function pushRemote(data){
+async function pushRemote(){
   if (!cfg) return;
   const res = await fetch(JSONBIN_BASE + cfg.binId, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', 'X-Access-Key': cfg.key },
-    body: JSON.stringify(data)
+    body: JSON.stringify({ categories: DATA, launchers: LAUNCHERS })
   });
   if (!res.ok) throw new Error('Push failed: ' + res.status);
 }
@@ -922,16 +1065,14 @@ async function initialLoad(){
   refreshBanner();
   if (!cfg){
     setStatus('', 'Not connected — local only');
+    buildChips();
     render();
     return;
   }
   setStatus('syncing', 'Loading…');
   try{
     const remote = await fetchRemote();
-    if (Array.isArray(remote)){
-      DATA = remote;
-      saveCache();
-    }
+    applyRemoteRecord(remote);
     setStatus('ok', 'Synced');
     buildChips();
     render();
@@ -949,7 +1090,7 @@ function queueSync(){
   clearTimeout(syncTimer);
   syncTimer = setTimeout(async () => {
     try{
-      await pushRemote(DATA);
+      await pushRemote();
       setStatus('ok', 'Synced');
     }catch(e){
       setStatus('err', 'Sync failed — will retry on next change');
@@ -988,6 +1129,86 @@ function findCat(name){
   return DATA.find(c => c.category === name);
 }
 
+// ---------- Launchers ----------
+const launchersRow = document.getElementById('launchersRow');
+
+function renderLaunchers(){
+  launchersRow.innerHTML = '';
+  if (LAUNCHERS.length === 0 && !editing) return;
+
+  if (LAUNCHERS.length > 0){
+    const label = document.createElement('span');
+    label.className = 'launchers-label';
+    label.textContent = 'Quick launch:';
+    launchersRow.appendChild(label);
+  }
+
+  LAUNCHERS.forEach(launcher => {
+    const pill = document.createElement('div');
+    pill.className = 'launcher-pill';
+
+    const goEl = document.createElement('span');
+    goEl.className = 'go';
+    goEl.textContent = '▶';
+    pill.appendChild(goEl);
+
+    const nameEl = document.createElement('span');
+    nameEl.textContent = launcher.name;
+    pill.appendChild(nameEl);
+
+    const badge = document.createElement('span');
+    badge.className = 'badge';
+    badge.textContent = launcher.links.length;
+    pill.appendChild(badge);
+
+    pill.addEventListener('click', (e) => {
+      if (e.target.closest('.icon-btn')) return;
+      openLauncher(launcher);
+    });
+
+    const editBtn = document.createElement('button');
+    editBtn.className = 'icon-btn';
+    editBtn.textContent = '✎';
+    editBtn.title = 'Edit';
+    editBtn.onclick = (e) => { e.stopPropagation(); openLauncherModal(launcher); };
+    pill.appendChild(editBtn);
+
+    const delBtn = document.createElement('button');
+    delBtn.className = 'icon-btn del';
+    delBtn.textContent = '×';
+    delBtn.title = 'Delete';
+    delBtn.onclick = (e) => {
+      e.stopPropagation();
+      if (!confirm(`Delete launcher "${launcher.name}"?`)) return;
+      LAUNCHERS = LAUNCHERS.filter(l => l.id !== launcher.id);
+      queueSync();
+      renderLaunchers();
+    };
+    pill.appendChild(delBtn);
+
+    launchersRow.appendChild(pill);
+  });
+
+  if (editing){
+    const newBtn = document.createElement('button');
+    newBtn.className = 'new-launcher-btn';
+    newBtn.textContent = '+ New Launcher';
+    newBtn.onclick = () => openLauncherModal(null);
+    launchersRow.appendChild(newBtn);
+  }
+}
+
+function openLauncher(launcher){
+  let blocked = 0;
+  launcher.links.forEach(l => {
+    const w = window.open(l.url, '_blank');
+    if (!w) blocked++;
+  });
+  if (blocked > 0){
+    alert(`Your browser blocked ${blocked} of the tabs. Allow pop-ups for this site to open the full set.`);
+  }
+}
+
 function removeLink(catName, index){
   const cat = findCat(catName);
   if (!cat) return;
@@ -1014,6 +1235,7 @@ function render(){
   let shown = 0;
 
   wrapEl.classList.toggle('editing', editing);
+  renderLaunchers();
 
   DATA.forEach(cat => {
     if (activeCategory && cat.category !== activeCategory) return;
@@ -1260,16 +1482,11 @@ document.getElementById('confirmSettings').addEventListener('click', async () =>
     const res = await fetch(JSONBIN_BASE + binId + '/latest', { headers: { 'X-Access-Key': key } });
     if (!res.ok) throw new Error(res.status === 404 ? 'Bin not found — check the Bin ID.' : 'Access denied — check the Access Key.');
     const json = await res.json();
-    if (Array.isArray(json.record)){
-      DATA = json.record;
-      saveCache();
-    } else {
+    const applied = applyRemoteRecord(json.record);
+    if (!applied){
       // bin exists but empty/wrong shape — push our current data to seed it
-      await fetch(JSONBIN_BASE + binId, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'X-Access-Key': key },
-        body: JSON.stringify(DATA)
-      });
+      cfg = testCfg;
+      await pushRemote();
     }
     saveCfg(testCfg);
     refreshBanner();
@@ -1284,9 +1501,93 @@ document.getElementById('confirmSettings').addEventListener('click', async () =>
   }
 });
 
+// Launcher modal
+const launcherOverlay = document.getElementById('launcherOverlay');
+const launcherModalTitle = document.getElementById('launcherModalTitle');
+const lName = document.getElementById('l-name');
+const launcherChecklist = document.getElementById('launcherChecklist');
+const launcherErr = document.getElementById('launcherErr');
+const launcherDeleteBtn = document.getElementById('launcherDelete');
+
+function openLauncherModal(launcher){
+  editingLauncherId = launcher ? launcher.id : null;
+  launcherModalTitle.textContent = launcher ? 'Edit launcher' : 'New launcher';
+  lName.value = launcher ? launcher.name : '';
+  launcherErr.classList.remove('show');
+  launcherDeleteBtn.style.display = launcher ? 'inline-block' : 'none';
+
+  const checkedUrls = new Set((launcher ? launcher.links : []).map(l => l.url));
+  launcherChecklist.innerHTML = '';
+  DATA.forEach(cat => {
+    if (cat.links.length === 0) return;
+    const catLabel = document.createElement('div');
+    catLabel.className = 'checklist-cat';
+    catLabel.textContent = cat.category;
+    launcherChecklist.appendChild(catLabel);
+    cat.links.forEach((l, i) => {
+      const row = document.createElement('div');
+      row.className = 'checklist-item';
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.id = `lcb-${cat.category}-${i}`.replace(/\s+/g, '_');
+      cb.dataset.title = l.title;
+      cb.dataset.url = l.url;
+      cb.checked = checkedUrls.has(l.url);
+      const lbl = document.createElement('label');
+      lbl.htmlFor = cb.id;
+      lbl.textContent = l.title;
+      row.appendChild(cb);
+      row.appendChild(lbl);
+      launcherChecklist.appendChild(row);
+    });
+  });
+
+  launcherOverlay.classList.add('show');
+  lName.focus();
+}
+function closeLauncherModal(){ launcherOverlay.classList.remove('show'); }
+
+document.getElementById('cancelLauncher').addEventListener('click', closeLauncherModal);
+launcherOverlay.addEventListener('click', (e) => { if (e.target === launcherOverlay) closeLauncherModal(); });
+
+launcherDeleteBtn.addEventListener('click', () => {
+  if (!editingLauncherId) return;
+  if (!confirm('Delete this launcher?')) return;
+  LAUNCHERS = LAUNCHERS.filter(l => l.id !== editingLauncherId);
+  queueSync();
+  renderLaunchers();
+  closeLauncherModal();
+});
+
+document.getElementById('confirmLauncher').addEventListener('click', () => {
+  const name = lName.value.trim();
+  if (!name){
+    launcherErr.textContent = 'Give the launcher a name.';
+    launcherErr.classList.add('show');
+    return;
+  }
+  const checked = [...launcherChecklist.querySelectorAll('input[type=checkbox]:checked')];
+  if (checked.length === 0){
+    launcherErr.textContent = 'Select at least one bookmark.';
+    launcherErr.classList.add('show');
+    return;
+  }
+  const links = checked.map(cb => ({ title: cb.dataset.title, url: cb.dataset.url }));
+
+  if (editingLauncherId){
+    const existing = LAUNCHERS.find(l => l.id === editingLauncherId);
+    if (existing){ existing.name = name; existing.links = links; }
+  } else {
+    LAUNCHERS.push({ id: 'launcher_' + Date.now().toString(36) + Math.random().toString(36).slice(2,6), name, links });
+  }
+  queueSync();
+  renderLaunchers();
+  closeLauncherModal();
+});
+
 // Export / Import
 document.getElementById('exportBtn').addEventListener('click', () => {
-  const blob = new Blob([JSON.stringify(DATA, null, 2)], {type: 'application/json'});
+  const blob = new Blob([JSON.stringify({ categories: DATA, launchers: LAUNCHERS }, null, 2)], {type: 'application/json'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = 'bookmarks-export.json';
@@ -1303,8 +1604,8 @@ importFile.addEventListener('change', () => {
   reader.onload = () => {
     try{
       const parsed = JSON.parse(reader.result);
-      if (!Array.isArray(parsed)) throw new Error('bad format');
-      DATA = parsed;
+      const applied = applyRemoteRecord(parsed);
+      if (!applied) throw new Error('bad format');
       queueSync();
       buildChips();
       render();
@@ -1317,8 +1618,9 @@ importFile.addEventListener('change', () => {
 });
 
 document.getElementById('resetBtn').addEventListener('click', () => {
-  if (!confirm('Reset to the original bookmark set? This overwrites your current list (and the synced copy, if connected).')) return;
+  if (!confirm('Reset to the original bookmark set? This clears your launchers too, and overwrites the synced copy if connected.')) return;
   DATA = structuredClone(DEFAULT_DATA);
+  LAUNCHERS = [];
   queueSync();
   buildChips();
   render();
