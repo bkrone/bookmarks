@@ -394,6 +394,88 @@
     white-space:nowrap;
     cursor:pointer;
   }
+  .checklist-item.hidden{ display:none; }
+  .checklist-cat.hidden{ display:none; }
+  #l-search{
+    width: 100%;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    color: var(--text);
+    font-size: 13px;
+    padding: 9px 12px;
+    border-radius: 6px;
+    font-family: var(--sans);
+    outline: none;
+    margin-bottom: 10px;
+  }
+  #l-search:focus{ border-color: var(--accent); }
+  .order-label{
+    font-family: var(--mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+  }
+  .order-list{
+    display:flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 16px;
+    max-height: 160px;
+    overflow-y: auto;
+  }
+  .order-empty{
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text-dim);
+    padding: 8px 0;
+  }
+  .order-chip{
+    display:flex;
+    align-items:center;
+    gap: 8px;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 7px 10px;
+    font-size: 13px;
+    cursor: grab;
+  }
+  .order-chip:active{ cursor: grabbing; }
+  .order-chip.drag-over{
+    outline: 1px dashed var(--accent);
+    outline-offset: 2px;
+  }
+  .order-chip .num{
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    width: 16px;
+    flex-shrink:0;
+  }
+  .order-chip .handle{
+    color: var(--text-dim);
+    font-size: 12px;
+    flex-shrink:0;
+  }
+  .order-chip .otitle{
+    flex:1;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .order-chip .oremove{
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    color: var(--text-dim);
+    font-size: 12px;
+    cursor: pointer;
+    flex-shrink:0;
+  }
+  .order-chip .oremove:hover{ color: var(--danger); }
   .banner{
     display:none;
     background: rgba(255,122,48,0.08);
@@ -613,8 +695,11 @@
     </div>
     <div class="field">
       <label>Bookmarks to open</label>
+      <input id="l-search" type="text" placeholder="Search bookmarks…">
     </div>
     <div class="checklist" id="launcherChecklist"></div>
+    <div class="order-label">Launch order — drag to reorder</div>
+    <div class="order-list" id="launcherOrderList"></div>
     <div class="modal-err" id="launcherErr"></div>
     <div class="modal-actions">
       <button class="btn" id="launcherDelete" style="display:none;">Delete</button>
@@ -1505,18 +1590,126 @@ document.getElementById('confirmSettings').addEventListener('click', async () =>
 const launcherOverlay = document.getElementById('launcherOverlay');
 const launcherModalTitle = document.getElementById('launcherModalTitle');
 const lName = document.getElementById('l-name');
+const lSearch = document.getElementById('l-search');
 const launcherChecklist = document.getElementById('launcherChecklist');
+const launcherOrderList = document.getElementById('launcherOrderList');
 const launcherErr = document.getElementById('launcherErr');
 const launcherDeleteBtn = document.getElementById('launcherDelete');
+
+let selectedOrder = []; // [{title, url}] in launch order
+let orderDragIdx = null;
+
+function keyFor(url){ return url; }
+
+function isSelected(url){
+  return selectedOrder.some(l => l.url === url);
+}
+
+function setChecklistCheckbox(url, checked){
+  const cb = launcherChecklist.querySelector(`input[data-url="${CSS.escape(url)}"]`);
+  if (cb) cb.checked = checked;
+}
+
+function toggleSelect(title, url, checked){
+  if (checked){
+    if (!isSelected(url)) selectedOrder.push({ title, url });
+  } else {
+    selectedOrder = selectedOrder.filter(l => l.url !== url);
+  }
+  renderOrderList();
+}
+
+function renderOrderList(){
+  launcherOrderList.innerHTML = '';
+  if (selectedOrder.length === 0){
+    const empty = document.createElement('div');
+    empty.className = 'order-empty';
+    empty.textContent = 'Check items above to add them here, in the order tabs should open.';
+    launcherOrderList.appendChild(empty);
+    return;
+  }
+  selectedOrder.forEach((l, idx) => {
+    const chip = document.createElement('div');
+    chip.className = 'order-chip';
+    chip.draggable = true;
+    chip.dataset.idx = idx;
+
+    const num = document.createElement('span');
+    num.className = 'num';
+    num.textContent = idx + 1;
+    const handle = document.createElement('span');
+    handle.className = 'handle';
+    handle.textContent = '⠿';
+    const title = document.createElement('span');
+    title.className = 'otitle';
+    title.textContent = l.title;
+    const rm = document.createElement('button');
+    rm.className = 'oremove';
+    rm.textContent = '×';
+    rm.title = 'Remove';
+    rm.onclick = () => {
+      setChecklistCheckbox(l.url, false);
+      toggleSelect(l.title, l.url, false);
+    };
+
+    chip.appendChild(num);
+    chip.appendChild(handle);
+    chip.appendChild(title);
+    chip.appendChild(rm);
+
+    chip.addEventListener('dragstart', (e) => {
+      orderDragIdx = idx;
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    chip.addEventListener('dragover', (e) => {
+      if (orderDragIdx === null) return;
+      e.preventDefault();
+      chip.classList.add('drag-over');
+    });
+    chip.addEventListener('dragleave', () => chip.classList.remove('drag-over'));
+    chip.addEventListener('drop', (e) => {
+      if (orderDragIdx === null) return;
+      e.preventDefault();
+      chip.classList.remove('drag-over');
+      const [item] = selectedOrder.splice(orderDragIdx, 1);
+      let destIdx = idx;
+      if (orderDragIdx < destIdx) destIdx -= 1;
+      selectedOrder.splice(destIdx, 0, item);
+      orderDragIdx = null;
+      renderOrderList();
+    });
+
+    launcherOrderList.appendChild(chip);
+  });
+}
+
+function filterChecklist(){
+  const q = lSearch.value.trim().toLowerCase();
+  launcherChecklist.querySelectorAll('.checklist-cat').forEach(cat => {
+    let anyVisible = false;
+    let node = cat.nextElementSibling;
+    while (node && node.classList.contains('checklist-item')){
+      const title = node.querySelector('label').textContent.toLowerCase();
+      const match = !q || title.includes(q);
+      node.classList.toggle('hidden', !match);
+      if (match) anyVisible = true;
+      node = node.nextElementSibling;
+    }
+    cat.classList.toggle('hidden', !anyVisible);
+  });
+}
 
 function openLauncherModal(launcher){
   editingLauncherId = launcher ? launcher.id : null;
   launcherModalTitle.textContent = launcher ? 'Edit launcher' : 'New launcher';
   lName.value = launcher ? launcher.name : '';
+  lSearch.value = '';
   launcherErr.classList.remove('show');
   launcherDeleteBtn.style.display = launcher ? 'inline-block' : 'none';
 
-  const checkedUrls = new Set((launcher ? launcher.links : []).map(l => l.url));
+  selectedOrder = launcher ? launcher.links.map(l => ({ title: l.title, url: l.url })) : [];
+  const checkedUrls = new Set(selectedOrder.map(l => l.url));
+
   launcherChecklist.innerHTML = '';
   DATA.forEach(cat => {
     if (cat.links.length === 0) return;
@@ -1533,6 +1726,7 @@ function openLauncherModal(launcher){
       cb.dataset.title = l.title;
       cb.dataset.url = l.url;
       cb.checked = checkedUrls.has(l.url);
+      cb.addEventListener('change', () => toggleSelect(l.title, l.url, cb.checked));
       const lbl = document.createElement('label');
       lbl.htmlFor = cb.id;
       lbl.textContent = l.title;
@@ -1542,10 +1736,13 @@ function openLauncherModal(launcher){
     });
   });
 
+  renderOrderList();
   launcherOverlay.classList.add('show');
   lName.focus();
 }
 function closeLauncherModal(){ launcherOverlay.classList.remove('show'); }
+
+lSearch.addEventListener('input', filterChecklist);
 
 document.getElementById('cancelLauncher').addEventListener('click', closeLauncherModal);
 launcherOverlay.addEventListener('click', (e) => { if (e.target === launcherOverlay) closeLauncherModal(); });
@@ -1566,13 +1763,12 @@ document.getElementById('confirmLauncher').addEventListener('click', () => {
     launcherErr.classList.add('show');
     return;
   }
-  const checked = [...launcherChecklist.querySelectorAll('input[type=checkbox]:checked')];
-  if (checked.length === 0){
+  if (selectedOrder.length === 0){
     launcherErr.textContent = 'Select at least one bookmark.';
     launcherErr.classList.add('show');
     return;
   }
-  const links = checked.map(cb => ({ title: cb.dataset.title, url: cb.dataset.url }));
+  const links = selectedOrder.map(l => ({ title: l.title, url: l.url }));
 
   if (editingLauncherId){
     const existing = LAUNCHERS.find(l => l.id === editingLauncherId);
